@@ -12,7 +12,11 @@ $TargetList = @(
 $Username = "ADMIN"
 $Password = "ADMIN"
 $TimeoutSeconds = 300
-$LogFile = ".\nutanix-auto-start.log"
+
+# Use script's own directory so Task Scheduler can always write the log
+$ScriptDir = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
+if (-not $ScriptDir) { $ScriptDir = $env:TEMP }
+$LogFile = Join-Path $ScriptDir "nutanix-auto-start.log"
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12 -bor [System.Net.SecurityProtocolType]::Tls11 -bor [System.Net.SecurityProtocolType]::Tls
 $CsharpCode = @"
     using System;
@@ -40,7 +44,9 @@ function Write-Log {
     try {
         Add-Content -Path $LogFile -Value $LogLine -ErrorAction Stop
     } catch {
-        Write-Warning "Could not write to log file: $_"
+        # Fallback: write to TEMP if script directory is not writable
+        $FallbackLog = Join-Path $env:TEMP "nutanix-auto-start.log"
+        try { Add-Content -Path $FallbackLog -Value $LogLine -ErrorAction SilentlyContinue } catch { }
     }
 }
 
@@ -173,7 +179,7 @@ function Start-HostPower {
 }
 
 # --- Main Execution ---
-Clear-Host
+try { Clear-Host } catch { }
 Write-Log "--- Nutanix Cluster Startup By ZenithComp ---" "Cyan"
 Write-Log "Targets: $($TargetList -join ', ')" "Cyan"
 

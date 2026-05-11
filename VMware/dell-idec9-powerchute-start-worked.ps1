@@ -10,7 +10,10 @@ $TargetList = @(
 $Username = "root"  #iDRAC username
 $Password = "P@ssw0rd" #iDRAC password
 $TimeoutSeconds = 300
-$LogFile = ".\idrac-auto-start.log"
+
+$ScriptDir = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
+if (-not $ScriptDir) { $ScriptDir = $env:TEMP }
+$LogFile = Join-Path $ScriptDir "idrac-auto-start.log"
 
 # Setup Security Protocols
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
@@ -171,7 +174,7 @@ function Start-HostPower {
 }
 
 # --- Main Execution ---
-Clear-Host
+try { Clear-Host } catch { }
 Write-Log "--- Dell iDRAC Startup ---" "Cyan"
 Write-Log "Targets: $($TargetList -join ', ')" "Cyan"
 
